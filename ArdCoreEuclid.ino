@@ -25,7 +25,12 @@
 
 // Pin 13 has an LED connected on most Arduino boards. 
 // give it a name so we can use it when debugging 
-int led = 13; 
+int led = 13;
+
+// Set up variables for remote control over serial interface
+int control = 0;
+int value = 0;
+
 
 // We'll be toggling it's state so make this easy 
 static unsigned int led_state = 0; 
@@ -50,11 +55,14 @@ int binaryLength;
 
 
 // flag for control changes, set to true first time so it can populate array 
-boolean controlChanged = true; 
+boolean controlChanged = true;
 long int newLeftC; 
 long int newRightC; 
 long int currentLeftC; 
-long int currentRightC; 
+long int currentRightC;
+
+// Set remote change to false
+boolean remoteControlChanged = false;
 
 // isrChanging() - quickly handle interrupts from the clock input 
 void isrChanging() { 
@@ -95,18 +103,45 @@ controlChanged = true;
 
 } 
 
-void loop() { 
-// See if controls have changed 
+void loop() {
+// See if remote control has sent any changes
+// I want to look for P and either 1 or 2 then value
+// parseInt will only pull out the Int values so P1, 255 will give me 1 and 255
+if (Serial.find("P")) {
+  control = Serial.parseInt();
+  value = Serial.parseInt();
+  remoteControlChanged = true;
+}
+
+
+
+// See if controls have changed
+
+// First read the panel controls
 newLeftC = (analogRead(0)/68)+1; 
 newRightC = (analogRead(1)/30)+1; 
 //if (newRightC < newLeftC) newRightC = newLeftC; 
 if (newLeftC != currentLeftC) controlChanged = true; 
-if (newRightC != currentRightC) controlChanged = true; 
+if (newRightC != currentRightC) controlChanged = true;
+
 // Act on control change 
-if (controlChanged) { 
-// Get the control values 
-currentLeftC = newLeftC; 
-currentRightC = newRightC; 
+if (controlChanged || remoteControlChanged) { 
+
+  // Get the control values 
+  if (controlChanged) {
+    currentLeftC = newLeftC; 
+    currentRightC = newRightC;
+  }
+
+  if (remoteControlChanged) {
+    if (control = 1) {
+      currentLeftC = value;
+    }
+    if (control = 2) {
+      currentRightC = value;
+    }
+  }
+
 result = euclid(currentLeftC,currentRightC); 
 
 binaryLength = findlength(result); 
@@ -117,15 +152,15 @@ result = result >> 1;
 euclidPattern[binaryLength] = 2; 
 controlChanged = false; 
 looper = 0; 
-Serial.print("E("); 
-Serial.print(currentLeftC); 
-Serial.print(","); 
-Serial.print(currentRightC); 
-Serial.print(") "); 
+//Serial.print("E("); 
+//Serial.print(currentLeftC); 
+//Serial.print(","); 
+//Serial.print(currentRightC); 
+//Serial.print(") "); 
 for (x=0; x<=(binaryLength-1); x++) { 
-Serial.print(euclidPattern[x]); 
-} 
-Serial.println(""); 
+  Serial.print(euclidPattern[x]); 
+  } 
+  Serial.println(""); 
 } 
 // check our state 
 if (changed) { 
